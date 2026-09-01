@@ -1,0 +1,190 @@
+\ Autoshaping Pigeons' Key-Peck	
+\ José Luis Baroja
+\ June 2017
+
+\ This program implements the classic autoshaping procedure for pigeons.
+\ It can present either both, or each of two keys (left or right) in the same session,
+\ and it can also separate key-food pairings by random or constant intervals.
+
+\ Program main parameters:
+\ P; controls the probability of selecting each key in each paring; defined in line 101 and used in line 126.
+\ I; list of possible intervals between pairings; defined in line 58 and used in line 123.
+\ N; number of pairings per session; defined in line 102 and used in line 121.
+
+\ Lab Configuration
+\ inputs
+\ 1: Center key 
+\ 2: Left key
+\ 3: Right key
+\ outputs
+\ 1: Center light - white
+\ 2: Center light - red
+\ 3: Center light - green
+\ 4: Center light - blue
+\ 5: Left light - white
+\ 6: Left light - red
+\ 7: Left light - green
+\ 8: =none=
+\ 9: Right light - white
+\ 10: Right light - red
+\ 11: Right light - green
+\ 12: Feeder
+\ 13: =none=
+\ 14: Chamber light
+\ 15: Tone
+\ 16: Click
+
+\ Experiment Configuration
+\inputs
+^central_key=1
+^left_key=2
+^right_key=3
+\outputs
+^central_light=1
+^feeder=12
+^left_light=5
+^right_light=9
+^chamber_light=14
+
+\variables
+\T: session time (sec/100)
+\E: index of array A (real time events)
+\F: index of array Z (real time z-pulses)
+\J: scheduled interval (sampled with replacement from list I, line 113)
+\N: number of light-food pairings to be presented in session
+\P: probability of presenting each key in each pairing
+
+\lists
+LIST I = 45
+
+\arrays
+DIM A = 10000 \ Real time events
+DIM Z = 500 \ Real time z-pulses
+DIM V = 5 \ Counters
+	\ V(0) = Number presentations left_light
+	\ V(1) = Number responses left_key
+	\ V(2) = Number presentations right_light
+	\ V(3) = Number responses right_key
+	\ V(4) = Number responses central_key
+	\ V(5) = Number of reinforcers
+
+\ Z-pulses
+\ Z1: Send to left light
+\ Z2: Send to right light
+\ Z3: To feeder
+\ Z4: To next trial/pairing
+
+\event key (real Time array)
+\T.01: Session start
+\T.02: Session end
+\T.11: Response in central key 
+\T.12: Response in left key
+\T.13: Response in right key
+\T.21: Central light ON
+\T.22: Left light ON
+\T.23: Right light ON
+\T.24: Feeder ON
+\T.25: Chamber light ON
+\T.31: Central light OFF
+\T.32: Left light OFF
+\T.33: Right light OFF
+\T.34: Feeder OFF
+\T.35: Chamber light OFF 
+
+
+\ Session start; main time counter
+S.S.1,
+S1,
+#START: set E = 0;
+	set F = 0;
+	set T = 0;
+	set P = 5000;
+	set N = 60; \ Sets number of pairings in session
+	set V(0) = 0;
+	set V(1) = 0;
+	set V(2) = 0;
+	set V(3) = 0;
+	set V(4) = 0;
+	set V(5) = 0;
+	add E; set A(E-1)=T+.01; \ Record session start
+	off^chamber_light; add E; set A(E-1)=T+0.35;
+	Z4; add F; set Z(F-1)=T+0.004 ---> S2 
+
+S2,
+0.01": add T ---> SX
+
+
+
+\ Decide next key
+S.S.2, 
+S1,
+#Z4: if V(5)=N[@T,@F] \ Finish if number of reinforcers equals pairings per session
+	@T: add E; set A(E-1)=T+.02 ---> STOPABORTFLUSH \ Record session end
+	@F: RANDI J = I; set J = J*1" ---> S2
+
+S2,
+J#T: WITHPI=P[@T,@F] \ Wait J seconds and then decide which key gets lighted
+	@T: Z1; add F; set Z(F-1)=T+0.001 ---> S1
+	@F: Z2; add F; set Z(F-1)=T+0.002 ---> S1
+
+
+
+\ Presentation of LEFT key (+ reinf)
+S.S.3,
+S1,
+#Z1: on^left_light; add E; set A(E-1)=T+0.22;
+	add V(0); SHOW 1, left_on, V(0) ---> S2
+
+S2,
+10"!#R^left_key: off^left_light; add E; set A(E-1)=T+0.32;
+	Z3; add F; set Z(F-1)=T+0.003 ---> S1
+
+
+
+\ Presentation of RIGHT key (+ reinf)
+S.S.4,
+S1,
+#Z2: on^right_light; add E; set A(E-1)=T+0.23;
+	add V(2); SHOW 2, right_on, V(2) ---> S2
+
+S2,
+10"!#R^right_key: off^right_light; add E; set A(E-1)=T+0.33;
+	Z3; add F; set Z(F-1)=T+0.003 ---> S1
+
+
+
+\ Feeder
+S.S.5, 
+S1, 
+#Z3: on^feeder; add E; set A(E-1)=T+0.24 ---> S2
+
+S2,
+3": off^feeder; add E; set A(E-1)=T+0.34; 
+	add V(5);
+	Z4; add F; set Z(F-1)=T+0.004 ---> S1 \ To next trial 
+
+
+
+\ Recording all LEFT responses times
+S.S.6,
+S1,
+#R^left_key: add E; set A(E-1)=T+0.12;
+	 add V(1); SHOW 3, resp_left, V(1) ---> SX
+
+
+
+\ Recording all RIGHT responses times
+S.S.7,
+S1,
+#R^right_key: add E; set A(E-1)=T+0.13;
+	add V(3); SHOW 4, resp_right, V(3) ---> SX
+
+
+ 
+\ Recording all CEN responses times
+S.S.8,
+S1,
+#R^central_key: add V(4); add E; set A(E-1)=T+0.11;
+	add V(4); SHOW 5, resp_central, V(4) ---> SX
+
+

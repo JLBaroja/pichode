@@ -1,0 +1,9 @@
+bird,keys_in_session,interval,first_condition,second_condition
+P004,both,constant,LR_c,LR_c
+P054,both,constant,LR_c,LR_c
+P736,both,variable,LR_v,LR_v
+P051,both,variable,LR_v,LR_v
+P138,single,constant,L_c,R_c
+P510,single,constant,R_c,L_c
+P530,single,variable,L_v,R_v
+P056,single,variable,R_v,L_v
