@@ -1,5 +1,5 @@
 # PICHODE
-** Pigeon Choice in Dynamic Environments**
+**Pigeon Choice in Dynamic Environments**
 
 PICHODE is a behavioral dataset for studying choice and adaptation in pigeons exposed to concurrent variable-interval (VI–VI) reinforcement schedules.
 
