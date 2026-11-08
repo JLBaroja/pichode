@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 import pandas as pd
 
 def read_med_array(file_name, array):
@@ -63,6 +64,24 @@ def extract_med_events(file_name):
 
     return records
 
+def parse_vi_schedules(msn):
+    """Extract left and right VI schedules from an MSN string."""
+    parts = msn.split("_")
+
+    left = [float(value) for value in parts[2:5]]
+    right = [float(value) for value in parts[6:9]]
+
+    return left, right
+
+def classify_session(msn):
+    """Classify a session as stable or dynamic."""
+    left, right = parse_vi_schedules(msn)
+
+    if len(set(left)) == 1 and len(set(right)) == 1:
+        return "stable"
+
+    return "dynamic"
+
 def concurrent_extractor(file_name):
     """Convert a concurrent MED-PC session into a pandas DataFrame."""
 
@@ -115,6 +134,26 @@ def concurrent_extractor(file_name):
     df["second_cp_left"] = left[1]
     df["first_cp_right"] = right[0]
     df["second_cp_right"] = right[1]
-    
+
+    left_vi, right_vi = parse_vi_schedules(data["experiment_program"])
+    df["session_type"] = classify_session(data["experiment_program"])
+
+    time = df["session_time_sec"]
+    cp_left_1 = float(left[0])
+    cp_left_2 = float(left[1])
+    cp_right_1 = float(right[0])
+    cp_right_2 = float(right[1])
+
+    df["vi_left"] = np.select(
+        [time < cp_left_1, time < cp_left_2],
+        left_vi[:2],
+        default=left_vi[2],
+    )
+
+    df["vi_right"] = np.select(
+        [time < cp_right_1, time < cp_right_2],
+        right_vi[:2],
+        default=right_vi[2],
+    )
     return df
 
