@@ -157,3 +157,13 @@ def concurrent_extractor(file_name):
     )
     return df
 
+def extract_concurrent_directory(input_dir, output_dir):
+    """Extract all concurrent MED-PC sessions into individual CSV files."""
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for file in sorted(input_dir.iterdir()):
+        if file.is_file():
+            df = concurrent_extractor(file)
+            df.to_csv(output_dir / f"{file.name}.csv", index=False)
