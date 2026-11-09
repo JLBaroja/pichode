@@ -228,7 +228,7 @@ def extract_response_directory(input_dir, output_dir):
     for file in sorted(input_dir.glob("*.csv")):
         df = pd.read_csv(file)
         responses = extract_responses(df)
-        responses.to_csv(output_dir / file.name, index=False)
+        responses.to_csv(output_dir / file.name, index=False, float_format="%.2f")
 
 def extract_visits(df):
     """Summarize consecutive responses on the same key into visits."""
@@ -257,6 +257,11 @@ def extract_visits(df):
         visits["end_time_sec"] - visits["start_time_sec"]
     )
 
+    # Time since the last response on the opposite key.
+    visits["time_since_other_key_sec"] = (
+        visits["start_time_sec"] - visits["end_time_sec"].shift(1)
+    )
+
     # Time until the next visit begins.
     visits["time_to_switch_sec"] = (
         visits["start_time_sec"].shift(-1) - visits["start_time_sec"]
@@ -271,6 +276,7 @@ def extract_visits(df):
             "start_time_sec",
             "end_time_sec",
             "duration_sec",
+            "time_since_other_key_sec",
             "time_to_switch_sec",
             "n_responses",
             "n_reinforcers",
@@ -289,4 +295,178 @@ def extract_visit_directory(input_dir, output_dir):
     for file in sorted(input_dir.glob("*.csv")):
         df = pd.read_csv(file)
         visits = extract_visits(df)
-        visits.to_csv(output_dir / file.name, index=False)
+        visits.to_csv(output_dir / file.name, index=False, float_format="%.2f")
+
+def extract_reinforcers(df):
+    """Summarize behavioral history leading up to each obtained reinforcer."""
+    df = df.copy().reset_index(drop=True)
+
+    # Identify visits and positions within visits.
+    df["visit"] = df["response"].ne(df["response"].shift()).cumsum()
+    df["response_in_visit"] = df.groupby("visit").cumcount() + 1
+
+    # Interresponse intervals, measured retrospectively.
+    df["iri_sec"] = df["time_sec"].diff().fillna(df["time_sec"])
+
+    # Response-based allocation: interval belongs to its ending response.
+    df["time_response_key"] = df["response"]
+
+    # Visit-based allocation: interval belongs to its starting response.
+    # The first interval belongs to the first response.
+    df["time_visit_key"] = df["response"].shift().fillna(df["response"])
+
+    # Within-visit allocation: exclude intervals crossing a key switch.
+    df["time_within_sec"] = df["iri_sec"].where(
+        df["response"].eq(df["response"].shift()), 0.0
+    )
+
+    # Identify switches (the first response is not a switch).
+    df["switch"] = df["response"].ne(df["response"].shift())
+    df.loc[0, "switch"] = False
+
+    records = []
+    previous_reinforcer_index = -1
+    previous_reinforcer_time = 0.0
+    previous_reinforcer_key = None
+
+    last_same_key_index = {"left": -1, "right": -1}
+    last_same_key_time = {"left": 0.0, "right": 0.0}
+
+    for i in df.index[df["reinforced"] == 1]:
+        row = df.loc[i]
+        key = row["response"]
+
+        # Responses since the previous reinforcer, including this one.
+        interval = df.iloc[previous_reinforcer_index + 1:i + 1]
+
+        # Responses on this key since its previous reinforcer.
+        same_key_interval = df.iloc[last_same_key_index[key] + 1:i + 1]
+
+        # Most recent response on the opposite key.
+        other_key = "right" if key == "left" else "left"
+        previous_other = df.iloc[:i]
+        previous_other = previous_other[
+            previous_other["response"] == other_key
+        ]
+
+        time_since_other = (
+            row["time_sec"] - previous_other["time_sec"].iloc[-1]
+            if len(previous_other) else float("nan")
+        )
+
+        visit_start = df.loc[
+            df["visit"] == row["visit"], "time_sec"
+        ].iloc[0]
+
+        records.append({
+            "bird": row["bird"],
+            "session": row["session"],
+            "reinforcer": len(records) + 1,
+            "time_sec": row["time_sec"],
+            "response": key,
+            "session_type": row["session_type"],
+            "vi_left": row["vi_left"],
+            "vi_right": row["vi_right"],
+            "visit": row["visit"],
+            "response_in_visit": row["response_in_visit"],
+            "first_reinforcer": previous_reinforcer_index == -1,
+            "cost_responses_total": len(interval),
+            "cost_responses_local": (interval["response"] == key).sum(),
+            "cost_responses_other": (interval["response"] == other_key).sum(),
+            "cost_responses_since_same_key_reinforcer": (
+                (same_key_interval["response"] == key).sum()
+            ),
+            "cost_time_local_response_sec": interval.loc[
+                interval["time_response_key"] == key, "iri_sec"
+            ].sum(),
+            "cost_time_other_response_sec": interval.loc[
+                interval["time_response_key"] == other_key, "iri_sec"
+            ].sum(),
+            "cost_time_local_visit_sec": interval.loc[
+                interval["time_visit_key"] == key, "iri_sec"
+            ].sum(),
+            "cost_time_other_visit_sec": interval.loc[
+                interval["time_visit_key"] == other_key, "iri_sec"
+            ].sum(),
+            "cost_time_local_within_sec": interval.loc[
+                interval["response"] == key, "time_within_sec"
+            ].sum(),
+            "cost_time_other_within_sec": interval.loc[
+                interval["response"] == other_key, "time_within_sec"
+            ].sum(),
+            "cost_time_total_sec": (
+                row["time_sec"] - previous_reinforcer_time
+            ),
+            "cost_time_since_same_key_reinforcer_sec": (
+                row["time_sec"] - last_same_key_time[key]
+            ),
+            "n_switches": int(interval["switch"].sum()),
+            "previous_reinforcer_key": previous_reinforcer_key,
+            "time_since_other_key_sec": time_since_other,
+            "time_in_current_visit_sec": (
+                row["time_sec"] - visit_start
+            ),
+        })
+
+        previous_reinforcer_index = i
+        previous_reinforcer_time = row["time_sec"]
+        previous_reinforcer_key = key
+
+        last_same_key_index[key] = i
+        last_same_key_time[key] = row["time_sec"]
+
+    result = pd.DataFrame(records)
+
+    if result.empty:
+        return pd.DataFrame(columns=[
+            "bird",
+            "session",
+            "reinforcer",
+            "time_sec",
+            "response",
+            "session_type",
+            "vi_left",
+            "vi_right",
+            "visit",
+            "response_in_visit",
+            "first_reinforcer",
+            "cost_responses_total",
+            "cost_responses_local",
+            "cost_responses_other",
+            "cost_responses_since_same_key_reinforcer",
+            "cost_time_total_sec",
+            "cost_time_local_response_sec",
+            "cost_time_other_response_sec",
+            "cost_time_local_visit_sec",
+            "cost_time_other_visit_sec",
+            "cost_time_local_within_sec",
+            "cost_time_other_within_sec",
+            "cost_time_since_same_key_reinforcer_sec",
+            "n_switches",
+            "previous_reinforcer_key",
+            "time_since_other_key_sec",
+            "time_in_current_visit_sec",
+        ])
+
+    return result
+
+def extract_reinforcer_directory(
+    input_dir="data/processed/concurrent/responses",
+    output_dir="data/processed/concurrent/reinforcers",
+):
+    """Extract reinforcer-level data from all response CSV files."""
+    from pathlib import Path
+
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for file in sorted(input_dir.glob("*.csv")):
+        df = pd.read_csv(file)
+        reinforcers = extract_reinforcers(df)
+
+        reinforcers.to_csv(
+            output_dir / file.name,
+            index=False,
+            float_format="%.2f",
+        )

@@ -1,6 +1,6 @@
-bird,session,visit,response,start_time_sec,end_time_sec,duration_sec,time_to_switch_sec,n_responses,n_reinforcers,session_type,vi_left,vi_right
-p530,10,1,left,1.43,2676.74,2675.31,2676.32,2360,97,stable,30.0,90.0
-p530,10,2,right,2677.75,2677.75,0.0,4.960000000000036,1,1,stable,30.0,90.0
-p530,10,3,left,2682.71,3211.3,528.5900000000001,531.1700000000001,490,16,stable,30.0,90.0
-p530,10,4,right,3213.88,3213.88,0.0,4.639999999999873,1,1,stable,30.0,90.0
-p530,10,5,left,3218.52,3599.47,380.9499999999998,,301,7,stable,30.0,90.0
+bird,session,visit,response,start_time_sec,end_time_sec,duration_sec,time_since_other_key_sec,time_to_switch_sec,n_responses,n_reinforcers,session_type,vi_left,vi_right
+p530,10,1,left,1.43,2676.74,2675.31,,2676.32,2360,97,stable,30.00,90.00
+p530,10,2,right,2677.75,2677.75,0.00,1.01,4.96,1,1,stable,30.00,90.00
+p530,10,3,left,2682.71,3211.30,528.59,4.96,531.17,490,16,stable,30.00,90.00
+p530,10,4,right,3213.88,3213.88,0.00,2.58,4.64,1,1,stable,30.00,90.00
+p530,10,5,left,3218.52,3599.47,380.95,4.64,,301,7,stable,30.00,90.00
