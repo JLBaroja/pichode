@@ -203,6 +203,23 @@ def extract_responses(df):
         )
     ).astype(int)
 
+    # Time since the preceding response, regardless of key.
+    responses["irt_sec"] = (
+        responses["time_sec_100"].diff() / 100
+    )
+
+    # Distinguish consecutive responses on the same key from switches.
+    same_key = responses["response"].eq(responses["response"].shift())
+
+    responses["irt_type"] = "switch"
+    responses.loc[same_key, "irt_type"] = "within"
+    responses.loc[responses.index[0:1], "irt_type"] = None
+
+    # Time since the preceding response on the same key.
+    responses["time_since_same_key_response_sec"] = (
+        responses.groupby("response")["time_sec_100"].diff() / 100
+    )
+
     # Retain only the columns needed for modeling.
     responses = responses.rename(columns={"session_time_sec": "time_sec"})
 
@@ -212,6 +229,9 @@ def extract_responses(df):
             "session",
             "time_sec",
             "response",
+            "irt_sec",
+            "irt_type",
+            "time_since_same_key_response_sec",
             "reinforced",
             "session_type",
             "vi_left",
