@@ -229,3 +229,64 @@ def extract_response_directory(input_dir, output_dir):
         df = pd.read_csv(file)
         responses = extract_responses(df)
         responses.to_csv(output_dir / file.name, index=False)
+
+def extract_visits(df):
+    """Summarize consecutive responses on the same key into visits."""
+
+    df = df.copy()
+
+    # A new visit begins whenever the pigeon switches keys.
+    df["visit"] = df["response"].ne(df["response"].shift()).cumsum()
+
+    # Summarize each visit.
+    visits = df.groupby("visit", sort=True).agg(
+        bird=("bird", "first"),
+        session=("session", "first"),
+        response=("response", "first"),
+        start_time_sec=("time_sec", "first"),
+        end_time_sec=("time_sec", "last"),
+        n_responses=("response", "size"),
+        n_reinforcers=("reinforced", "sum"),
+        session_type=("session_type", "first"),
+        vi_left=("vi_left", "first"),
+        vi_right=("vi_right", "first"),
+    ).reset_index()
+
+    # Time between first and last responses.
+    visits["duration_sec"] = (
+        visits["end_time_sec"] - visits["start_time_sec"]
+    )
+
+    # Time until the next visit begins.
+    visits["time_to_switch_sec"] = (
+        visits["start_time_sec"].shift(-1) - visits["start_time_sec"]
+    )
+
+    return visits[
+        [
+            "bird",
+            "session",
+            "visit",
+            "response",
+            "start_time_sec",
+            "end_time_sec",
+            "duration_sec",
+            "time_to_switch_sec",
+            "n_responses",
+            "n_reinforcers",
+            "session_type",
+            "vi_left",
+            "vi_right",
+        ]
+    ]
+
+def extract_visit_directory(input_dir, output_dir):
+    """Convert response-level CSVs into visit-level CSVs."""
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for file in sorted(input_dir.glob("*.csv")):
+        df = pd.read_csv(file)
+        visits = extract_visits(df)
+        visits.to_csv(output_dir / file.name, index=False)

@@ -1,0 +1,4 @@
+bird,session,visit,response,start_time_sec,end_time_sec,duration_sec,time_to_switch_sec,n_responses,n_reinforcers,session_type,vi_left,vi_right
+p004,4,1,right,34.92,919.77,884.85,887.99,134,10,stable,30.0,90.0
+p004,4,2,left,922.91,922.91,0.0,7.009999999999991,1,1,stable,30.0,90.0
+p004,4,3,right,929.92,3599.91,2669.99,,801,28,stable,30.0,90.0
