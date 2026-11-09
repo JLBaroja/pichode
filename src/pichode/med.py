@@ -167,3 +167,65 @@ def extract_concurrent_directory(input_dir, output_dir):
         if file.is_file():
             df = concurrent_extractor(file)
             df.to_csv(output_dir / f"{file.name}.csv", index=False)
+
+def extract_responses(df):
+    """Extract individual choices and reinforcement outcomes from event data."""
+
+    # Identify feeder activations by timestamp and key.
+    reinforced_left = set(
+        df.loc[df["event"] == "feeder_on_left", "time_sec_100"]
+    )
+    reinforced_right = set(
+        df.loc[df["event"] == "feeder_on_right", "time_sec_100"]
+    )
+
+    # Keep only left/right responses occurring after session initialization.
+    responses = df[
+        df["event"].isin(["response_left_key", "response_right_key"])
+        & (df["time_sec_100"] > 0)
+    ].copy()
+
+    # Identify which key was pressed.
+    responses["response"] = responses["event"].map({
+        "response_left_key": "left",
+        "response_right_key": "right",
+    })
+
+    # Determine whether each response produced reinforcement.
+    responses["reinforced"] = (
+        (
+            (responses["response"] == "left")
+            & responses["time_sec_100"].isin(reinforced_left)
+        )
+        | (
+            (responses["response"] == "right")
+            & responses["time_sec_100"].isin(reinforced_right)
+        )
+    ).astype(int)
+
+    # Retain only the columns needed for modeling.
+    responses = responses.rename(columns={"session_time_sec": "time_sec"})
+
+    return responses[
+        [
+            "bird",
+            "session",
+            "time_sec",
+            "response",
+            "reinforced",
+            "session_type",
+            "vi_left",
+            "vi_right",
+        ]
+    ]
+
+def extract_response_directory(input_dir, output_dir):
+    """Convert event-level CSVs into response-level CSVs."""
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for file in sorted(input_dir.glob("*.csv")):
+        df = pd.read_csv(file)
+        responses = extract_responses(df)
+        responses.to_csv(output_dir / file.name, index=False)
