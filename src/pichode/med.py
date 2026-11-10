@@ -94,7 +94,7 @@ def concurrent_extractor(file_name):
     df["session_time_sec"] = df["time_sec_100"] / 100
 
     # Add session metadata.
-    df["bird"] = data["subject"]
+    df["bird"] = data["subject"].strip().lower()
     df["date"] = data["date"]
     df["box"] = data["box"]
     df["session_start"] = data["session_start"]
