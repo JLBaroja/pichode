@@ -1,0 +1,3 @@
+bird,session,responses,seconds,divergences,max_rhat,min_ess,status
+p054,30,2236,12.02,0,1.02114,184.579,completed
+p736,150,3437,14.6,0,1.00925,235.976,completed

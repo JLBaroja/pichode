@@ -1,0 +1,47 @@
+# stan_version_major = 2
+# stan_version_minor = 39
+# stan_version_patch = 0
+# model = two_timescales_model
+# start_datetime = 2026-11-13 02:17:38 UTC
+# method = sample (Default)
+#   sample
+#     num_samples = 250
+#     num_warmup = 500
+#     save_warmup = false (Default)
+#     thin = 1 (Default)
+#     adapt
+#       engaged = true (Default)
+#       gamma = 0.05 (Default)
+#       delta = 0.95
+#       kappa = 0.75 (Default)
+#       t0 = 10 (Default)
+#       init_buffer = 75 (Default)
+#       term_buffer = 50 (Default)
+#       window = 25 (Default)
+#       save_metric = false (Default)
+#     algorithm = hmc (Default)
+#       hmc
+#         engine = nuts (Default)
+#           nuts
+#             max_depth = 10 (Default)
+#         metric = diag_e (Default)
+#         metric_file =  (Default)
+#         stepsize = 1 (Default)
+#         stepsize_jitter = 0 (Default)
+#     num_chains = 1 (Default)
+# id = 4
+# data
+#   file = /tmp/tmpxz6isqdt/z_l45rpe.json
+# init = /tmp/tmpxz6isqdt/bfnm7mmg.json
+# random
+#   seed = 126
+# output
+#   file = /home/jbaroja/Research/pichode/results/timescales/preliminary/stan_csv/two_timescales-20261112181738_4.csv
+#   diagnostic_file =  (Default)
+#   refresh = 100 (Default)
+#   sig_figs = 8 (Default)
+#   profile_file = profile.csv (Default)
+#   save_cmdstan_config = false (Default)
+# num_threads = 1 (Default)
+# stanc_version = stanc3 v2.39.0
+# stancflags = --filename-in-msg=two_timescales.stan
