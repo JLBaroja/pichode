@@ -9,3 +9,7 @@ wheels/
 # Virtual environments
 .venv
 data/processed/concurrent/events/
+
+# Compiled Stan executables
+/models/timescales/single_timescale
+/models/timescales/two_timescales
