@@ -6,7 +6,7 @@ data {
 }
 
 parameters {
-  real<lower=1, upper=1000> tau;
+  real<lower=1, upper=5000> tau;
 }
 
 model {
