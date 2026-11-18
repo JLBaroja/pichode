@@ -218,7 +218,7 @@ def plot_matrix(data):
                         GRID,
                         kde(GRID),
                         color=BIRD_COLORS[bird],
-                        linewidth=1.7,
+                        linewidth=2.5,
                         alpha=0.9,
                     )
 
